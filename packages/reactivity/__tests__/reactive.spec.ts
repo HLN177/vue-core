@@ -28,4 +28,28 @@ describe('reactivity/reactive', () => {
     counter.num = 7
     expect(dummy).toBe(7)
   })
+
+  test('side effect will executed accurately', () => {
+    let dummy1, dummy2;
+    const original = {
+      name1: 'test1',
+      name2: 'test2'
+    };
+    const observed = reactive(original);
+    const fnSpy1 = jest.fn(() => {
+      dummy1 = observed.name1;
+    });
+    const fnSpy2 = jest.fn(() => {
+      dummy2 = observed.name2;
+    })
+    effect(fnSpy1);
+    effect(fnSpy2);
+    expect(fnSpy1).toHaveBeenCalledTimes(1);
+    expect(fnSpy2).toHaveBeenCalledTimes(1);
+    observed.name1 = 'test3';
+    expect(dummy1).toBe('test3');
+    expect(dummy2).toBe('test2');
+    expect(fnSpy1).toHaveBeenCalledTimes(2);
+    expect(fnSpy2).toHaveBeenCalledTimes(1);
+  })
 });
