@@ -4,21 +4,43 @@
  * WeakMap -> Map -> Set
  */
 const bucket = new WeakMap<any, KeyToDepMap>();
-type Dep = Set<any>;
-type KeyToDepMap = Map<any, Dep>
+type KeyToDepMap = Map<any, Deps>
 
 /**
  * variable for saving current effect function
  */
-let activeEffect: Function | null;
+let activeEffect: ReactiveEffect | undefined;
+
+type Deps = Set<ReactiveEffect>;
+
+interface ReactiveEffect {
+  (): any,
+  deps: Deps[]
+}
 
 /**
  * wrap function to register the effect func
  */
 function effect(fn: Function) {
-  activeEffect = fn;
-  fn();
-  activeEffect = null;
+  const effectFn: ReactiveEffect = () => {
+    cleanupEffect(effectFn);
+    activeEffect = effectFn;
+    fn();
+    activeEffect = undefined;
+  };
+
+  effectFn.deps = [];
+  effectFn();
+}
+
+function cleanupEffect(effectFn: ReactiveEffect) {
+  const { deps } = effectFn;
+  if (deps.length) {
+    for (let i = 0; i < deps.length; i++) {
+      deps[i].delete(effectFn);
+    }
+    deps.length = 0;
+  }
 }
 
 /** 
@@ -58,6 +80,9 @@ function track(target: Object, key: any) {
   const deps = depMap!.get(key);
   // 3. save the current active effect function into bucket
   deps!.add(activeEffect);
+  // 4. "deps" is a dependence set related to current active effect function
+  //    push "deps" into activeEffect.deps as a record
+  activeEffect.deps.push(deps as Deps);
 }
 
 function trigger(target: Object, key: any) {
@@ -66,8 +91,10 @@ function trigger(target: Object, key: any) {
     const depMap = bucket.get(target);
     // 2. get effects from depsMap by "key"
     const effects: Set<any> | undefined = depMap!.get(key);
-    // 3. validation and run the related effect functions
-    effects && effects.forEach(fn => fn && fn());
+    // 3. prevent forEach from infinite loop 
+    const effectsToRun = new Set(effects);
+    // 4. validation and run the related effect functions
+    effectsToRun && effectsToRun.forEach(fn => fn && fn());
   }
 }
 
