@@ -102,9 +102,16 @@ function trigger(target: Object, key: any) {
     // 2. get effects from depsMap by "key"
     const effects: Set<any> | undefined = depMap!.get(key);
     // 3. prevent forEach from infinite loop 
-    const effectsToRun = new Set(effects);
-    // 4. validation and run the related effect functions
-    effectsToRun && effectsToRun.forEach(fn => fn && fn());
+    const effectsToRun = new Set<ReactiveEffect>();
+    // 4. prevent recursive infinitely
+    effects && effects.forEach(effectFn => {
+      // effect functions would not be excuted if it equals to current active effect func
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn);
+      }
+    });
+    // 5. validation and run the related effect functions
+    effectsToRun && effectsToRun.forEach(fn => fn());
   }
 }
 

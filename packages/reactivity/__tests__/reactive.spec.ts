@@ -103,4 +103,15 @@ describe('reactivity/reactive', () => {
     // expect(parentSpy).toHaveBeenCalledTimes(2);
     // expect(childSpy).toHaveBeenCalledTimes(4);
   });
+
+  it('should not recursive infinitely', () => {
+    const observed = reactive({ value: 1 });
+    const spy = jest.fn(() => {
+      observed.value = observed.value + 1;
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.value = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
 });
