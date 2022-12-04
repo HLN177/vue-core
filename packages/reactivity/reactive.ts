@@ -11,6 +11,12 @@ type KeyToDepMap = Map<any, Deps>
  */
 let activeEffect: ReactiveEffect | undefined;
 
+/**
+ * effect function stack
+ * handle nested effect
+ */
+const effectStack: ReactiveEffect[] = [];
+
 type Deps = Set<ReactiveEffect>;
 
 interface ReactiveEffect {
@@ -25,8 +31,12 @@ function effect(fn: Function) {
   const effectFn: ReactiveEffect = () => {
     cleanupEffect(effectFn);
     activeEffect = effectFn;
+    // before invoke effect func, push current effect function into stack
+    effectStack.push(effectFn);
     fn();
-    activeEffect = undefined;
+    // after effect func completing, pop and switch to the previous effect func
+    effectStack.pop();
+    activeEffect = effectStack[effectStack.length - 1];
   };
 
   effectFn.deps = [];

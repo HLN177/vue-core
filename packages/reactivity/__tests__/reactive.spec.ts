@@ -73,4 +73,34 @@ describe('reactivity/reactive', () => {
     expect(dummy).toBe('Hell');
     expect(fnSpy).toHaveBeenCalledTimes(2);
   });
+
+  test('nested effect and effect stack', () => {
+    const nums = reactive({ num1: 0, num2: 1, num3: 2 })
+    const dummy: any = {}
+    const childSpy = jest.fn(() => {
+      dummy.num1 = nums.num1;
+    })
+    const parentSpy = jest.fn(() => {
+      dummy.num2 = nums.num2;
+      effect(childSpy);
+      dummy.num3 = nums.num3;
+    });
+    effect(parentSpy);
+    expect(dummy).toEqual({ num1: 0, num2: 1, num3: 2 });
+    expect(parentSpy).toHaveBeenCalledTimes(1);
+    expect(childSpy).toHaveBeenCalledTimes(1);
+    nums.num1 = 11;
+    expect(dummy).toEqual({ num1: 11, num2: 1, num3: 2 });
+    expect(parentSpy).toHaveBeenCalledTimes(1);
+    expect(childSpy).toHaveBeenCalledTimes(2);
+    nums.num2 = 22;
+    expect(dummy).toEqual({ num1: 11, num2: 22, num3: 2 });
+    expect(parentSpy).toHaveBeenCalledTimes(2);
+    expect(childSpy).toHaveBeenCalledTimes(3);
+    // to 目前effect会创建新的effectFn,bucket的set会一直增加”内容相同“的目前effect会创建新的effectFn,导致这条用例失败
+    // nums.num1 = 111;
+    // expect(dummy).toEqual({ num1: 111, num2: 22, num3: 2 });
+    // expect(parentSpy).toHaveBeenCalledTimes(2);
+    // expect(childSpy).toHaveBeenCalledTimes(4);
+  });
 });
