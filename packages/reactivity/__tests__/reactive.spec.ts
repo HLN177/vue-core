@@ -1,4 +1,4 @@
-import { reactive, effect } from "../reactive";
+import { reactive, effect, ReactiveEffect } from "../reactive";
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -113,5 +113,51 @@ describe('reactivity/reactive', () => {
     expect(spy).toHaveBeenCalledTimes(1);
     observed.value = 2;
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  test('scheduler', () => {
+    // determine a job queue
+    const jobQueue = new Set<ReactiveEffect>();
+    // generate a promise for micro task using
+    const p = Promise.resolve();
+    // a flag stand for the queue is flushing or not
+    let isFlushing = false;
+    function flushJob() {
+      if (isFlushing) {
+        return;
+      }
+      isFlushing = true;
+      p.then(() => {
+        jobQueue.forEach(fn => fn());
+      }).finally(() => {
+        isFlushing = false;
+      })
+    }
+    let dummy: number;
+    const observed = reactive({value: 0});
+    const spyLog = jest.fn(() => {
+      dummy = observed.value;
+      console.log(dummy);
+    });
+    effect(spyLog, {
+      scheduler(fn: ReactiveEffect) {
+        jobQueue.add(fn);
+        flushJob();
+      }
+    });
+    expect(spyLog).toHaveBeenCalledTimes(1);
+    observed.value++;
+    observed.value++;
+    observed.value++;
+    observed.value++;
+    p.then(() => {
+      expect(dummy).toBe(4);
+      expect(spyLog).toHaveBeenCalledTimes(2);
+    });
+    /**
+     * 由于jobQueue是set, 所以jobQueue中只会有一项,当前的effect func
+     * flushJob会连续执行4次,都由于isFlushing, 实际上在一个事件循环内, flushJob只会执行一次
+     * 该功能有点类似多次修改响应式数据,但只会触发一次更新
+     */
   });
 });

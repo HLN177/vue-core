@@ -19,15 +19,22 @@ const effectStack: ReactiveEffect[] = [];
 
 type Deps = Set<ReactiveEffect>;
 
-interface ReactiveEffect {
+interface ReactiveEffectOptions {
+  scheduler?: EffectScheduler // give user a opportunity to desicde when and how to invoke effect function
+}
+
+type EffectScheduler = (...args: any[]) => any
+
+export interface ReactiveEffect {
   (): any,
-  deps: Deps[]
+  deps: Deps[],
+  options: ReactiveEffectOptions | undefined
 }
 
 /**
  * wrap function to register the effect func
  */
-function effect(fn: Function) {
+function effect(fn: Function, options?: ReactiveEffectOptions) {
   const effectFn: ReactiveEffect = () => {
     cleanupEffect(effectFn);
     activeEffect = effectFn;
@@ -38,8 +45,8 @@ function effect(fn: Function) {
     effectStack.pop();
     activeEffect = effectStack[effectStack.length - 1];
   };
-
   effectFn.deps = [];
+  effectFn.options = options;
   effectFn();
 }
 
@@ -111,7 +118,13 @@ function trigger(target: Object, key: any) {
       }
     });
     // 5. validation and run the related effect functions
-    effectsToRun && effectsToRun.forEach(fn => fn());
+    effectsToRun && effectsToRun.forEach(fn => {
+      if (fn.options?.scheduler) {
+        fn.options.scheduler(fn);
+      } else {
+        fn();
+      }
+    });
   }
 }
 
