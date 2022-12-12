@@ -80,9 +80,12 @@ describe('reactivity/reactive', () => {
     const childSpy = jest.fn(() => {
       dummy.num1 = nums.num1;
     })
+    const childEffect = effect(childSpy, {
+      lazy: true
+    });
     const parentSpy = jest.fn(() => {
       dummy.num2 = nums.num2;
-      effect(childSpy);
+      childEffect();
       dummy.num3 = nums.num3;
     });
     effect(parentSpy);
@@ -97,11 +100,10 @@ describe('reactivity/reactive', () => {
     expect(dummy).toEqual({ num1: 11, num2: 22, num3: 2 });
     expect(parentSpy).toHaveBeenCalledTimes(2);
     expect(childSpy).toHaveBeenCalledTimes(3);
-    // to 目前effect会创建新的effectFn,bucket的set会一直增加”内容相同“的目前effect会创建新的effectFn,导致这条用例失败
-    // nums.num1 = 111;
-    // expect(dummy).toEqual({ num1: 111, num2: 22, num3: 2 });
-    // expect(parentSpy).toHaveBeenCalledTimes(2);
-    // expect(childSpy).toHaveBeenCalledTimes(4);
+    nums.num1 = 111;
+    expect(dummy).toEqual({ num1: 111, num2: 22, num3: 2 });
+    expect(parentSpy).toHaveBeenCalledTimes(2);
+    expect(childSpy).toHaveBeenCalledTimes(4);
   });
 
   it('should not recursive infinitely', () => {
