@@ -20,7 +20,8 @@ const effectStack: ReactiveEffect[] = [];
 type Deps = Set<ReactiveEffect>;
 
 interface ReactiveEffectOptions {
-  scheduler?: EffectScheduler // give user a opportunity to desicde when and how to invoke effect function
+  scheduler?: EffectScheduler, // give user a opportunity to desicde when and how to invoke effect function
+  lazy?: Boolean // lazy excute ability
 }
 
 type EffectScheduler = (...args: any[]) => any
@@ -34,20 +35,31 @@ export interface ReactiveEffect {
 /**
  * wrap function to register the effect func
  */
-function effect(fn: Function, options?: ReactiveEffectOptions) {
+function effect(
+  fn: Function,
+  options?: ReactiveEffectOptions
+): ReactiveEffect {
   const effectFn: ReactiveEffect = () => {
     cleanupEffect(effectFn);
     activeEffect = effectFn;
     // before invoke effect func, push current effect function into stack
     effectStack.push(effectFn);
-    fn();
+    // allow effect fn to return a result 
+    const res = fn();
     // after effect func completing, pop and switch to the previous effect func
     effectStack.pop();
     activeEffect = effectStack[effectStack.length - 1];
+    return res;
   };
   effectFn.deps = [];
   effectFn.options = options;
-  effectFn();
+  // only excute effect fn when lazy is not true
+  if (!options?.lazy) {
+    effectFn();
+  }
+
+  // expose effect fn for lazy excution
+  return effectFn;
 }
 
 function cleanupEffect(effectFn: ReactiveEffect) {
@@ -128,7 +140,41 @@ function trigger(target: Object, key: any) {
   }
 }
 
+function computed(getter: Function) {
+  // to save the previous value
+  let value: any;
+
+  /**
+   * a flag stand for this computed property should de computed again or not
+   * if dirty is false, obj.value will return value from memory directly
+  */ 
+  let dirty = true;
+
+  const effectFn = effect(getter, {
+    lazy: true,
+    // reset diry when the reactive properties inside getter have been changed
+    scheduler: () => {
+      dirty = true;
+      trigger(obj, 'value'); // let computed properties act like the reactive obj and able to trigger outer effect
+    }
+  });
+
+  const obj = {
+    get value() {
+      if (dirty) { // compute value agian if needed
+        value = effectFn();
+        dirty = false;
+      }
+      track(obj, 'value'); // let computed properties act like the reactive obj and able to trigger outer effect
+      return value;
+    }
+  };
+  
+  return obj;
+}
+
 export {
   effect,
-  reactive
+  reactive,
+  computed
 }
