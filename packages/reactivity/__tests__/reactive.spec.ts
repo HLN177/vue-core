@@ -1,4 +1,4 @@
-import { reactive, effect, ReactiveEffect, computed } from "../reactive";
+import { reactive, effect, ReactiveEffect, computed, watch } from "../reactive";
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -251,4 +251,36 @@ describe('reactivity/comupted', () => {
     value.foo = 2;
     expect(dummy).toBe(2);
   })
-})
+});
+
+describe('reactivity/watch', () => {
+  it('can watch reactive object', () => {
+    const observed = reactive({
+      foo1: 1,
+      foo2: []
+    });
+    const spy = jest.fn(() => { });
+    watch(observed, spy); // watch reactive object
+    observed.foo1 = 2;
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.foo2 = [1];
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should watch nested reactive object', () => {
+    // to do 
+  });
+
+  it('can watch a getter function', () => {
+    const observed = reactive({
+      foo1: 1
+    });
+    const callbackSpy = jest.fn(() => { });
+    watch(() => observed.foo1, callbackSpy);
+    expect(callbackSpy).toHaveBeenCalledTimes(0);
+    observed.foo1 = 2;
+    expect(callbackSpy).toHaveBeenCalledTimes(1);
+    observed.foo2 = 3;
+    expect(callbackSpy).toHaveBeenCalledTimes(1);
+  });
+});

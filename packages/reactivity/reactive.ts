@@ -173,8 +173,54 @@ function computed(getter: Function) {
   return obj;
 }
 
+/**
+ * watch: watch a reative obj and execute the corresponding callback
+ * @param source 
+ * @param cb 
+ */
+function watch(source: any, cb: Function) {
+  let getter: Function;
+  if (typeof source === 'function') {
+    getter = source;
+  } else {
+    getter = () => traverse(source);
+  }
+
+  // Internally, the completion of Watch leverages effect and option.scheduler
+  effect(
+    () => getter(), // register track function by effect
+    {
+      scheduler: () => { // Actually, scheduler is the callback of 'watch'
+        cb();
+      }
+    }
+  );
+}
+
+/**
+ * Recrusively traverse a object to register effect function into reative system
+ */
+function traverse(value: any, seen = new Set()) {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    value === undefined ||
+    seen.has(value)
+  ) {
+    return;
+  }
+
+  seen.add(value);
+  for (let key in value) {
+    traverse(value[key], seen);
+  }
+
+  return value;
+}
+
 export {
   effect,
   reactive,
-  computed
+  computed,
+  watch
 }
