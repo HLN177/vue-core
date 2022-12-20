@@ -283,4 +283,18 @@ describe('reactivity/watch', () => {
     observed.foo2 = 3;
     expect(callbackSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('should able to access new value and old value in watch callback function', () => { 
+    const observed = reactive({
+      foo: 1
+    });
+    watch(
+      () => observed.foo,
+      (newVal, oldVal) => {
+        expect(newVal).toBe(2);
+        expect(oldVal).toBe(1);
+      }
+    );
+    observed.foo = 2;
+  });
 });

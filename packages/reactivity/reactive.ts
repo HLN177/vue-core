@@ -173,12 +173,17 @@ function computed(getter: Function) {
   return obj;
 }
 
+type WatchCallback = (
+  value: any,
+  oldVal: any
+) => any;
+
 /**
  * watch: watch a reative obj and execute the corresponding callback
  * @param source 
  * @param cb 
  */
-function watch(source: any, cb: Function) {
+function watch(source: any, cb: WatchCallback) {
   let getter: Function;
   if (typeof source === 'function') {
     getter = source;
@@ -186,15 +191,25 @@ function watch(source: any, cb: Function) {
     getter = () => traverse(source);
   }
 
+  let newVal, oldVal: any;
+
   // Internally, the completion of Watch leverages effect and option.scheduler
-  effect(
+  const effectFn = effect(
     () => getter(), // register track function by effect
     {
+      lazy: true,
       scheduler: () => { // Actually, scheduler is the callback of 'watch'
-        cb();
+        // 1. get new val
+        newVal = effectFn();
+        // 2. excute callback function
+        cb(newVal, oldVal);
+        // 3. update old val for next excution
+        oldVal = newVal;
       }
     }
   );
+
+  oldVal = effectFn(); // manually set old value firstly
 }
 
 /**
