@@ -178,12 +178,20 @@ type WatchCallback = (
   oldVal: any
 ) => any;
 
+interface WatchOptions {
+  immediate?: Boolean
+};
+
 /**
  * watch: watch a reative obj and execute the corresponding callback
  * @param source 
  * @param cb 
  */
-function watch(source: any, cb: WatchCallback) {
+function watch(
+  source: any,
+  cb: WatchCallback,
+  option?: WatchOptions
+) {
   let getter: Function;
   if (typeof source === 'function') {
     getter = source;
@@ -193,23 +201,29 @@ function watch(source: any, cb: WatchCallback) {
 
   let newVal, oldVal: any;
 
+  const job = () => {
+    // 1. get new val
+    newVal = effectFn();
+    // 2. excute callback function
+    cb(newVal, oldVal);
+    // 3. update old val for next excution
+    oldVal = newVal;
+  };
+
   // Internally, the completion of Watch leverages effect and option.scheduler
   const effectFn = effect(
     () => getter(), // register track function by effect
     {
       lazy: true,
-      scheduler: () => { // Actually, scheduler is the callback of 'watch'
-        // 1. get new val
-        newVal = effectFn();
-        // 2. excute callback function
-        cb(newVal, oldVal);
-        // 3. update old val for next excution
-        oldVal = newVal;
-      }
+      scheduler: job// Actually, scheduler is the callback of 'watch'
     }
   );
 
-  oldVal = effectFn(); // manually set old value firstly
+  if (option?.immediate) {
+    job();
+  } else {
+    oldVal = effectFn(); // manually set old value firstly
+  }
 }
 
 /**

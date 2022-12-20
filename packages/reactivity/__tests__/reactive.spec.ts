@@ -288,13 +288,47 @@ describe('reactivity/watch', () => {
     const observed = reactive({
       foo: 1
     });
+    
+    let newValue, oldValue;
+    
     watch(
       () => observed.foo,
       (newVal, oldVal) => {
-        expect(newVal).toBe(2);
-        expect(oldVal).toBe(1);
+        newValue = newVal;
+        oldValue = oldVal;
       }
     );
+
     observed.foo = 2;
+    expect(newValue).toBe(2);
+    expect(oldValue).toBe(1);
+    observed.foo = 3;
+    expect(newValue).toBe(3);
+    expect(oldValue).toBe(2);
+  });
+
+  it('should able to excute callback function immediately', () => { 
+    const observed = reactive({
+      foo: 1
+    });
+    
+    let newValue, oldValue;
+    
+    watch(
+      () => observed.foo,
+      (newVal, oldVal) => {
+        newValue = newVal;
+        oldValue = oldVal;
+      },
+      {
+        immediate: true
+      }
+    );
+    expect(newValue).toBe(1);
+    expect(oldValue).toBe(undefined);
+
+    observed.foo = 2;
+    expect(newValue).toBe(2);
+    expect(oldValue).toBe(1);
   });
 });
