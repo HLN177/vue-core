@@ -331,4 +331,23 @@ describe('reactivity/watch', () => {
     expect(newValue).toBe(2);
     expect(oldValue).toBe(1);
   });
+
+  it('can control excution timing of scheduler', () => {
+    const observed = reactive({ foo: 1 });
+    let result: string;
+    watch(
+      () => observed.foo,
+      () => {
+        result = 'callback';
+      },
+      {
+        flush: 'post'
+      }
+    );
+    observed.foo = 2;
+    result = 'direct';
+    Promise.resolve().then(() => { 
+      expect(result).toBe('callback');
+    });
+  });
 });

@@ -178,8 +178,18 @@ type WatchCallback = (
   oldVal: any
 ) => any;
 
-interface WatchOptions {
-  immediate?: Boolean
+interface WatchOptionsBase {
+  /**
+   * determine excution timing of opions.scheduler
+   * 'pre': todo
+   * 'post': excution after DOM update
+   * 'sync: : todo
+   */
+  flush?: 'pre' | 'post' | 'sync'
+}
+
+interface WatchOptions extends WatchOptionsBase{
+  immediate?: Boolean, // excute callback immediately when watch is set
 };
 
 /**
@@ -215,7 +225,14 @@ function watch(
     () => getter(), // register track function by effect
     {
       lazy: true,
-      scheduler: job// Actually, scheduler is the callback of 'watch'
+      scheduler: () => { // Actually, scheduler is the callback of 'watch'
+        if (option?.flush === 'post') {
+          const p = Promise.resolve();
+          p.then(job);
+        } else {
+          job();
+        }
+      }
     }
   );
 
