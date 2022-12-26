@@ -139,7 +139,6 @@ describe('reactivity/reactive', () => {
     const observed = reactive({value: 0});
     const spyLog = jest.fn(() => {
       dummy = observed.value;
-      console.log(dummy);
     });
     effect(spyLog, {
       scheduler(fn: ReactiveEffect) {
@@ -161,6 +160,24 @@ describe('reactivity/reactive', () => {
      * flushJob会连续执行4次,都由于isFlushing, 实际上在一个事件循环内, flushJob只会执行一次
      * 该功能有点类似多次修改响应式数据,但只会触发一次更新
      */
+  });
+
+  it('should reactive getter function', () => {
+    let result;
+    const obj = {
+      foo: 1,
+      get bar() {
+        return this.foo;
+      }
+    };
+    const observed = reactive(obj);
+    const spy = jest.fn(() => {
+      result = observed.bar;
+    });
+    effect(spy);
+    observed.foo++;
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(result).toBe(2);
   });
 });
 

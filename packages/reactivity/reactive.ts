@@ -79,9 +79,9 @@ function cleanupEffect(effectFn: ReactiveEffect) {
  */
 function reactive(data: Object): any {
   return new Proxy(data, {
-    get: function (target, key) {
+    get: function(target, key, receiver) {
       track(target, key);
-      return Reflect.get(target, key);
+      return Reflect.get(target, key, receiver); // solve getter function by receiver 
     },
     set: function(target, key, newVal) {
       Reflect.set(target, key, newVal);
