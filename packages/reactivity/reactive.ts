@@ -87,6 +87,10 @@ function reactive(data: Object): any {
       Reflect.set(target, key, newVal);
       trigger(target, key);
       return true;
+    },
+    has: function (target, key) { // handle 'in' operator by ECMA-262 13.10.1 & 13.10.1
+      track(target, key);
+      return Reflect.has(target, key);
     }
   });
 }

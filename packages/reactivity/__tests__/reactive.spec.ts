@@ -179,6 +179,18 @@ describe('reactivity/reactive', () => {
     expect(spy).toHaveBeenCalledTimes(2);
     expect(result).toBe(2);
   });
+
+  it("should reactive 'in' operator", () => { 
+    const observed = reactive({
+      foo: 1
+    });
+    const spy = jest.fn(() => { 
+      'foo' in observed;
+    });
+    effect(spy);
+    observed.foo++;
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('reactivity/comupted', () => {
