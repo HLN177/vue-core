@@ -32,6 +32,8 @@ export interface ReactiveEffect {
   options: ReactiveEffectOptions | undefined
 }
 
+const ITERATE_KEY = Symbol('iterate');
+
 /**
  * wrap function to register the effect func
  */
@@ -79,18 +81,22 @@ function cleanupEffect(effectFn: ReactiveEffect) {
  */
 function reactive(data: Object): any {
   return new Proxy(data, {
-    get: function(target, key, receiver) {
+    get: function (target, key, receiver) {
       track(target, key);
       return Reflect.get(target, key, receiver); // solve getter function by receiver 
     },
-    set: function(target, key, newVal) {
-      Reflect.set(target, key, newVal);
+    set: function (target, key, newVal, receiver) {
+      Reflect.set(target, key, newVal, receiver);
       trigger(target, key);
       return true;
     },
     has: function (target, key) { // handle 'in' operator by ECMA-262 13.10.1 & 13.10.1
       track(target, key);
       return Reflect.has(target, key);
+    },
+    ownKeys: function (target) {
+      track(target, ITERATE_KEY);
+      return Reflect.ownKeys(target);
     }
   });
 }
@@ -119,29 +125,36 @@ function track(target: Object, key: any) {
 }
 
 function trigger(target: Object, key: any) {
-  if (bucket.has(target)) {
-    // 1. get depsMap from bucket by "target"
-    const depMap = bucket.get(target);
-    // 2. get effects from depsMap by "key"
-    const effects: Set<any> | undefined = depMap!.get(key);
-    // 3. prevent forEach from infinite loop 
-    const effectsToRun = new Set<ReactiveEffect>();
-    // 4. prevent recursive infinitely
-    effects && effects.forEach(effectFn => {
-      // effect functions would not be excuted if it equals to current active effect func
-      if (effectFn !== activeEffect) {
-        effectsToRun.add(effectFn);
-      }
-    });
-    // 5. validation and run the related effect functions
-    effectsToRun && effectsToRun.forEach(fn => {
-      if (fn.options?.scheduler) {
-        fn.options.scheduler(fn);
-      } else {
-        fn();
-      }
-    });
-  }
+  // get depsMap from bucket by "target"
+  const depMap = bucket.get(target);
+  if (!depMap) return;
+  // get effects from depsMap by "key"
+  const effects: Set<any> | undefined = depMap!.get(key);
+  // effects related to 'ITERATE_KEY'
+  const iterateEffects: Set<any> | undefined = depMap.get(ITERATE_KEY);
+  // prevent forEach from infinite loop 
+  const effectsToRun = new Set<ReactiveEffect>();
+  // prevent recursive infinitely by add effects to the new set
+  effects && effects.forEach(effectFn => {
+    // effect functions would not be excuted if it equals to current active effect func
+    if (effectFn !== activeEffect) {
+      effectsToRun.add(effectFn);
+    }
+  });
+  // prevent recursive infinitely by add iterate effects to the new set
+  iterateEffects && iterateEffects.forEach(effectFn => {
+    if (effectFn !== activeEffect) {
+      effectsToRun.add(effectFn);
+    }
+  });
+  // validation and run the related effect functions
+  effectsToRun && effectsToRun.forEach(fn => {
+    if (fn.options?.scheduler) {
+      fn.options.scheduler(fn);
+    } else {
+      fn();
+    }
+  });
 }
 
 function computed(getter: Function) {

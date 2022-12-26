@@ -191,6 +191,34 @@ describe('reactivity/reactive', () => {
     observed.foo++;
     expect(spy).toHaveBeenCalledTimes(2);
   });
+
+  it("should reactive 'for...in...'", () => {
+    const observed = reactive({
+      foo: 1
+    });
+    const spy = jest.fn(() => {
+      for (let i in observed) {
+        console.log(i);
+      }
+    });
+    effect(spy);
+    observed.foo1 = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should reactive nested obj', () => {
+    const observed = reactive({
+      nested: {
+        foo: 1
+      }
+    });
+    const spy = jest.fn(() => {
+      return observed.nested.foo;
+    });
+    effect(spy);
+    observed.nested.foo = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('reactivity/comupted', () => {
