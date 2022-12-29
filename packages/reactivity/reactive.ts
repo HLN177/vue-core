@@ -1,3 +1,4 @@
+import { TriggerOpTypes } from "./operations";
 /**
  * structure for saving effect function
  * target -> key -> effect function
@@ -86,17 +87,26 @@ function reactive(data: Object): any {
       return Reflect.get(target, key, receiver); // solve getter function by receiver 
     },
     set: function (target, key, newVal, receiver) {
+      const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
       Reflect.set(target, key, newVal, receiver);
-      trigger(target, key);
+      trigger(target, key, type);
       return true;
     },
     has: function (target, key) { // handle 'in' operator by ECMA-262 13.10.1 & 13.10.1
       track(target, key);
       return Reflect.has(target, key);
     },
-    ownKeys: function (target) {
+    ownKeys: function (target) { // handle 'for...in..'
       track(target, ITERATE_KEY);
       return Reflect.ownKeys(target);
+    },
+    deleteProperty: function (target, key) {
+      const hadKey = Object.prototype.hasOwnProperty.call(target, key);
+      const result = Reflect.deleteProperty(target, key);
+      if (result && hadKey) {
+        trigger(target, key, TriggerOpTypes.DEL);
+      }
+      return result;
     }
   });
 }
@@ -124,14 +134,12 @@ function track(target: Object, key: any) {
   activeEffect.deps.push(deps as Deps);
 }
 
-function trigger(target: Object, key: any) {
+function trigger(target: Object, key: any, type: TriggerOpTypes) {
   // get depsMap from bucket by "target"
   const depMap = bucket.get(target);
   if (!depMap) return;
   // get effects from depsMap by "key"
   const effects: Set<any> | undefined = depMap!.get(key);
-  // effects related to 'ITERATE_KEY'
-  const iterateEffects: Set<any> | undefined = depMap.get(ITERATE_KEY);
   // prevent forEach from infinite loop 
   const effectsToRun = new Set<ReactiveEffect>();
   // prevent recursive infinitely by add effects to the new set
@@ -141,12 +149,17 @@ function trigger(target: Object, key: any) {
       effectsToRun.add(effectFn);
     }
   });
-  // prevent recursive infinitely by add iterate effects to the new set
-  iterateEffects && iterateEffects.forEach(effectFn => {
-    if (effectFn !== activeEffect) {
-      effectsToRun.add(effectFn);
-    }
-  });
+
+  // when trigger type equals to 'add' and 'del', effects related to 'ITERATE_KEY' should be triggered
+  if (TriggerOpTypes.ADD === type || TriggerOpTypes.DEL === type) {
+    const iterateEffects: Set<any> | undefined = depMap.get(ITERATE_KEY);
+    // prevent recursive infinitely by add iterate effects to the new set
+    iterateEffects && iterateEffects.forEach(effectFn => {
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn);
+      }
+    });
+  }
   // validation and run the related effect functions
   effectsToRun && effectsToRun.forEach(fn => {
     if (fn.options?.scheduler) {
@@ -169,10 +182,10 @@ function computed(getter: Function) {
 
   const effectFn = effect(getter, {
     lazy: true,
-    // reset diry when the reactive properties inside getter have been changed
+    // reset dirty when the reactive properties inside getter have been changed
     scheduler: () => {
       dirty = true;
-      trigger(obj, 'value'); // let computed properties act like the reactive obj and able to trigger outer effect
+      trigger(obj, 'value', TriggerOpTypes.SET); // let computed properties act like the reactive obj and able to trigger outer effect
     }
   });
 

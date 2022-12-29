@@ -206,6 +206,36 @@ describe('reactivity/reactive', () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it("should not reactive 'for...in...' while value updating", () => {
+    const observed = reactive({
+      foo: 1
+    });
+    const spy = jest.fn(() => {
+      for (let i in observed) {
+        console.log(i);
+      }
+    });
+    effect(spy);
+    observed.foo = 2;
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should reative object delete property', () => {
+    const observed = reactive({
+      foo: 1,
+      foo1: 2
+    });
+    const spy = jest.fn(() => {
+      for (let i in observed) {
+        console.log(i);
+      }
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    delete observed.foo1;
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
   it('should reactive nested obj', () => {
     const observed = reactive({
       nested: {
