@@ -114,7 +114,7 @@ function reactive(data: Object): any {
 function track(target: Object, key: any) {
   // return directly if activeEffect no existed
   if (!activeEffect) {
-    return Reflect.get(target, key);
+    return;
   }
   // 1. get depsMap from bucket by "target", depsMap is a "Map"
   if (!bucket.has(target)) {
