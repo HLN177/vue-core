@@ -109,12 +109,12 @@ describe('reactivity/reactive', () => {
   it('should not recursive infinitely', () => {
     const observed = reactive({ value: 1 });
     const spy = jest.fn(() => {
-      observed.value = observed.value + 1;
+      observed.value++;
     });
     effect(spy);
     expect(spy).toHaveBeenCalledTimes(1);
     observed.value = 2;
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(spy).toHaveBeenCalledTimes(2); // 用例失败因为: reactive set function 增加新旧值判断, 如果新旧值相等则不trigger effect function
   });
 
   test('scheduler', () => {
@@ -265,6 +265,23 @@ describe('reactivity/reactive', () => {
     expect(spy).toHaveBeenCalledTimes(2);
     observed.foo = NaN;
     expect(spy).toHaveBeenCalledTimes(3);
+  });
+
+  it('should reactive property inherted from parent reactive object', () => {
+    const obj = {};
+    const proto = {
+      bar: 1
+    };
+    const child = reactive(obj);
+    const parent = reactive(proto);
+    Object.setPrototypeOf(child, parent);
+    const spy = jest.fn(() => {
+      console.log(child.bar);
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    child.bar = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 
   it('should reactive nested obj', () => {

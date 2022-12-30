@@ -83,6 +83,9 @@ function cleanupEffect(effectFn: ReactiveEffect) {
 function reactive(data: Object): any {
   return new Proxy(data, {
     get: function (target, key, receiver) {
+      if (key === 'raw') {
+        return target;
+      }
       track(target, key);
       return Reflect.get(target, key, receiver); // solve getter function by receiver 
     },
@@ -90,8 +93,10 @@ function reactive(data: Object): any {
       const oldVal = Reflect.get(target, key);
       const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
       Reflect.set(target, key, newVal, receiver);
-      if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) { // resolve NaN
-        trigger(target, key, type);
+      if (target === receiver.raw) {
+        if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) { // resolve NaN
+          trigger(target, key, type);
+        }
       }
       return true;
     },
