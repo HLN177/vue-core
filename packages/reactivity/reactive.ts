@@ -87,9 +87,12 @@ function reactive(data: Object): any {
       return Reflect.get(target, key, receiver); // solve getter function by receiver 
     },
     set: function (target, key, newVal, receiver) {
+      const oldVal = Reflect.get(target, key);
       const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
       Reflect.set(target, key, newVal, receiver);
-      trigger(target, key, type);
+      if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) { // resolve NaN
+        trigger(target, key, type);
+      }
       return true;
     },
     has: function (target, key) { // handle 'in' operator by ECMA-262 13.10.1 & 13.10.1

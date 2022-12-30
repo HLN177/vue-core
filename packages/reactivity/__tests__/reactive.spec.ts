@@ -236,6 +236,37 @@ describe('reactivity/reactive', () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it('should not trigger effect function if value unchanged', () => {
+    const observed = reactive({
+      foo: 1
+    });
+
+    const spy = jest.fn(() => {
+      console.log(observed.foo);
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.foo = 1;
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should not trigger effect function if new value equals to NaN as well as old value', () => {
+    const observed = reactive({
+      foo: NaN
+    });
+    const spy = jest.fn(() => {
+      console.log(observed.foo);
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.foo = NaN;
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.foo = 1;
+    expect(spy).toHaveBeenCalledTimes(2);
+    observed.foo = NaN;
+    expect(spy).toHaveBeenCalledTimes(3);
+  });
+
   it('should reactive nested obj', () => {
     const observed = reactive({
       nested: {
