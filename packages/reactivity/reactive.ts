@@ -75,11 +75,6 @@ function cleanupEffect(effectFn: ReactiveEffect) {
   }
 }
 
-/** 
- * reactive system 
- * 1. leverage getter of Proxy to save the effect function into data structure
- * 2. leverage setter of Proxy to update the effect by iterate the effect functions in the data structure 
- */
 function reactive(data: Object): any {
   return createReactive(data);
 }
@@ -88,28 +83,47 @@ function shallowReactive(data: Object): any {
   return createReactive(data, true);
 }
 
+function readonly(data: Object): any {
+  return createReactive(data, false, true);
+}
+
+function shallowReadonly(data: Object): any {
+  return createReactive(data, true, true);
+}
+
 /** 
  * reactive system 
  * 1. leverage getter of Proxy to save the effect function into data structure
  * 2. leverage setter of Proxy to update the effect by iterate the effect functions in the data structure 
  */
-function createReactive(data: Object, isShallow: Boolean = false): any {
+function createReactive(
+  data: Object,
+  isShallow: Boolean = false,
+  isReadonly: Boolean = false
+): any {
   return new Proxy(data, {
     get: function (target, key, receiver) {
       if (key === 'raw') {
         return target;
       }
-      track(target, key);
+      // read only obj do not need to trigger effect function 
+      if (!isReadonly) {
+        track(target, key);
+      }
       const res = Reflect.get(target, key, receiver); // solve getter function by receiver 
       if (isShallow) {
         return res;
       }
       if (typeof res === 'object' && res !== null) {
-        return reactive(res);
+        return isReadonly ? readonly(res) : reactive(res);
       }
       return res;
     },
     set: function (target, key, newVal, receiver) {
+      if (isReadonly) {
+        console.warn(`property ${String(key)} is read only`);
+        return true;
+      }
       const oldVal = Reflect.get(target, key);
       const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
       Reflect.set(target, key, newVal, receiver);
@@ -129,6 +143,10 @@ function createReactive(data: Object, isShallow: Boolean = false): any {
       return Reflect.ownKeys(target);
     },
     deleteProperty: function (target, key) {
+      if (isReadonly) {
+        console.warn(`property ${String(key)} is read only`);
+        return true;
+      }
       const hadKey = Object.prototype.hasOwnProperty.call(target, key);
       const result = Reflect.deleteProperty(target, key);
       if (result && hadKey) {
@@ -327,5 +345,7 @@ export {
   reactive,
   shallowReactive,
   computed,
-  watch
+  watch,
+  readonly,
+  shallowReadonly
 }

@@ -1,4 +1,4 @@
-import { reactive, shallowReactive, effect, ReactiveEffect, computed, watch } from "../reactive";
+import { reactive, shallowReactive, effect, ReactiveEffect, computed, watch, readonly, shallowReadonly } from "../reactive";
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -315,6 +315,47 @@ describe('reactivity/reactive', () => {
     expect(spy).toHaveBeenCalledTimes(2);
     observed.nested.bar = 2;
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should create read only object', () => {
+    const obj = readonly({
+      nested: {
+        boo: 1
+      }
+    });
+    const spy = jest.fn(() => {
+      return obj.nested.boo;
+    })
+    effect(spy);
+    obj.nested.boo = 2;
+    obj.nested = {
+      foo: 1
+    };
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should create shallow read only object', () => {
+    const obj = shallowReadonly({
+      nested: {
+        boo: 1
+      }
+    });
+    const spy = jest.fn(() => {
+      return obj.nested.boo;
+    })
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    obj.nested = {
+      foo: 1
+    };
+    expect(spy).toHaveBeenCalledTimes(1);
+    obj.nested.boo = 2;
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(obj.raw).toEqual({
+      nested: {
+        boo: 2
+      }
+    })
   });
 });
 
