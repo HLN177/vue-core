@@ -81,19 +81,39 @@ function cleanupEffect(effectFn: ReactiveEffect) {
  * 2. leverage setter of Proxy to update the effect by iterate the effect functions in the data structure 
  */
 function reactive(data: Object): any {
+  return createReactive(data);
+}
+
+function shallowReactive(data: Object): any {
+  return createReactive(data, true);
+}
+
+/** 
+ * reactive system 
+ * 1. leverage getter of Proxy to save the effect function into data structure
+ * 2. leverage setter of Proxy to update the effect by iterate the effect functions in the data structure 
+ */
+function createReactive(data: Object, isShallow: Boolean = false): any {
   return new Proxy(data, {
     get: function (target, key, receiver) {
       if (key === 'raw') {
         return target;
       }
       track(target, key);
-      return Reflect.get(target, key, receiver); // solve getter function by receiver 
+      const res = Reflect.get(target, key, receiver); // solve getter function by receiver 
+      if (isShallow) {
+        return res;
+      }
+      if (typeof res === 'object' && res !== null) {
+        return reactive(res);
+      }
+      return res;
     },
     set: function (target, key, newVal, receiver) {
       const oldVal = Reflect.get(target, key);
       const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
       Reflect.set(target, key, newVal, receiver);
-      if (target === receiver.raw) {
+      if (target === receiver.raw) { // avoid triggering effect function by prototype
         if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) { // resolve NaN
           trigger(target, key, type);
         }
@@ -305,6 +325,7 @@ function traverse(value: any, seen = new Set()) {
 export {
   effect,
   reactive,
+  shallowReactive,
   computed,
   watch
 }

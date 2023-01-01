@@ -1,4 +1,4 @@
-import { reactive, effect, ReactiveEffect, computed, watch } from "../reactive";
+import { reactive, shallowReactive, effect, ReactiveEffect, computed, watch } from "../reactive";
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -295,6 +295,25 @@ describe('reactivity/reactive', () => {
     });
     effect(spy);
     observed.nested.foo = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should create shallow reactive obj', () => {
+    const observed = shallowReactive({
+      nested: {
+        foo: 1
+      }
+    });
+    const spy = jest.fn(() => {
+      return observed.nested.foo;
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.nested = {
+      bar: 1
+    };
+    expect(spy).toHaveBeenCalledTimes(2);
+    observed.nested.bar = 2;
     expect(spy).toHaveBeenCalledTimes(2);
   });
 });
