@@ -142,8 +142,9 @@ function createReactive(
       track(target, key);
       return Reflect.has(target, key);
     },
-    ownKeys: function (target) { // handle 'for...in..'
-      track(target, ITERATE_KEY);
+    ownKeys: function (target) { // handle 'for...in...'
+      // Whether adding new elements to an array or simply changing the length of the array,the length property of the array is being changed essentially.
+      track(target, Array.isArray(target) ? 'length' : ITERATE_KEY);
       return Reflect.ownKeys(target);
     },
     deleteProperty: function (target, key) {

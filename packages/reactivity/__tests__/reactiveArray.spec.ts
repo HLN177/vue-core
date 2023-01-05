@@ -51,4 +51,21 @@ describe('reactivity/reactive/array', () => {
     expect(spy1).toHaveBeenCalledTimes(1);
     expect(spy2).toHaveBeenCalledTimes(2);
   });
+
+  it('for ... in array', () => {
+    const observed = reactive(['bar']);
+    let result = '';
+    const spy = jest.fn(() => {
+      result = '';
+      for (let key in observed) {
+        result += observed[key];
+      }
+    });
+    effect(spy);
+    expect(result).toBe('bar');
+    observed[1] = 'foo';
+    expect(result).toBe('barfoo');
+    observed.length = 0;
+    expect(result).toBe('');
+  });
 });
