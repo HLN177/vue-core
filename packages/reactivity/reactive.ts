@@ -125,11 +125,15 @@ function createReactive(
         return true;
       }
       const oldVal = Reflect.get(target, key);
-      const type = Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
+
+      const type = Array.isArray(target) // If the proxy target is an array, it checks whether the index value set is less than the array length 
+        ? Number(key) < target.length ? TriggerOpTypes.SET : TriggerOpTypes.ADD
+        : Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
+      
       Reflect.set(target, key, newVal, receiver);
       if (target === receiver.raw) { // avoid triggering effect function by prototype
         if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) { // resolve NaN
-          trigger(target, key, type);
+          trigger(target, key, type, newVal);
         }
       }
       return true;
@@ -180,7 +184,7 @@ function track(target: Object, key: any) {
   activeEffect.deps.push(deps as Deps);
 }
 
-function trigger(target: Object, key: any, type: TriggerOpTypes) {
+function trigger(target: Object, key: any, type: TriggerOpTypes, newVal?: any) {
   // get depsMap from bucket by "target"
   const depMap = bucket.get(target);
   if (!depMap) return;
@@ -206,6 +210,29 @@ function trigger(target: Object, key: any, type: TriggerOpTypes) {
       }
     });
   }
+
+  // When trigger type is 'add' and target type is Array, trigger length dependancies
+  if (Array.isArray(target) && TriggerOpTypes.ADD === type) {
+    const lengthEffects: Set<any> | undefined = depMap.get('length');
+    // prevent recursive infinitely by add iterate effects to the new set
+    lengthEffects && lengthEffects.forEach(effectFn => {
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn);
+      }
+    });
+  }
+
+  // when type of target is array and length changed
+  if (Array.isArray(target) && key === 'length') {
+    depMap && depMap.forEach((effectSet, key) => { // traverse all the index of array
+      if (Number(key) >= newVal) { // key >= val should trigger effect dependencies
+        effectSet && effectSet.forEach(effectFn => {
+          effectFn !== activeEffect && (effectsToRun.add(effectFn));
+        });
+      }
+    });
+  }
+
   // validation and run the related effect functions
   effectsToRun && effectsToRun.forEach(fn => {
     if (fn.options?.scheduler) {
