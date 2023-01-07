@@ -68,4 +68,28 @@ describe('reactivity/reactive/array', () => {
     observed.length = 0;
     expect(result).toBe('');
   });
+
+  it('for ... of array', () => {
+    const observed = reactive(['bar']);
+    let result = '';
+    const spy = jest.fn(() => {
+      result = '';
+      // Essencially, symbol.iterator in array is a function munipulating length and index
+      for (let item of observed) {
+        result += item;
+      }
+    });
+    effect(spy);
+    expect(result).toBe('bar');
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed[0] = 'bbr';
+    expect(result).toBe('bbr');
+    expect(spy).toHaveBeenCalledTimes(2);
+    observed[1] = 'foo';
+    expect(result).toBe('bbrfoo');
+    expect(spy).toHaveBeenCalledTimes(3);
+    observed.length = 1;
+    expect(result).toBe('bbr');
+    expect(spy).toHaveBeenCalledTimes(4);
+  })
 });

@@ -106,8 +106,8 @@ function createReactive(
       if (key === 'raw') {
         return target;
       }
-      // read only obj do not need to trigger effect function 
-      if (!isReadonly) {
+      // read only obj and 'symbol' key type do not need to trigger effect function 
+      if (!isReadonly && typeof key !== 'symbol') {
         track(target, key);
       }
       const res = Reflect.get(target, key, receiver); // solve getter function by receiver 
