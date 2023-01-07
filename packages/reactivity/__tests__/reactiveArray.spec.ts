@@ -91,5 +91,7 @@ describe('reactivity/reactive/array', () => {
     observed.length = 1;
     expect(result).toBe('bbr');
     expect(spy).toHaveBeenCalledTimes(4);
+    // In fact, 'values' function of Array is actually return the iterator in array
+    expect(Array.prototype.values === Array.prototype[Symbol.iterator]).toBe(true);
   })
 });
