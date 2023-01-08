@@ -463,7 +463,16 @@ describe('reactivity/watch', () => {
   });
 
   it('should watch nested reactive object', () => {
-    // to do 
+    const observed = reactive({
+      nested: {
+        foo: 2
+      }
+    });
+    const callbackSpy = jest.fn(() => { });
+    watch(observed, callbackSpy);
+    expect(callbackSpy).toHaveBeenCalledTimes(0);
+    observed.nested.foo = 1;
+    expect(callbackSpy).toHaveBeenCalledTimes(1);
   });
 
   it('can watch a getter function', () => {
