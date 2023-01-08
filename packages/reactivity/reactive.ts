@@ -7,6 +7,14 @@ import { TriggerOpTypes } from "./operations";
 const bucket = new WeakMap<any, KeyToDepMap>();
 type KeyToDepMap = Map<any, Deps>
 
+/** 
+ * exsiting proxy map
+*/
+const reactiveMap = new WeakMap<any, any>();
+const shallowReactiveMap = new WeakMap<any, any>();
+const readonlyMap = new WeakMap<any, any>();
+const shallowReadonlyMap = new WeakMap<any, any>();
+
 /**
  * variable for saving current effect function
  */
@@ -75,20 +83,20 @@ function cleanupEffect(effectFn: ReactiveEffect) {
   }
 }
 
-function reactive(data: Object): any {
-  return createReactive(data);
+function reactive(obj: Object): any {
+  return createReactive(obj, false, false, reactiveMap);
 }
 
-function shallowReactive(data: Object): any {
-  return createReactive(data, true);
+function shallowReactive(obj: Object): any {
+  return createReactive(obj, true, false, shallowReactiveMap);
 }
 
-function readonly(data: Object): any {
-  return createReactive(data, false, true);
+function readonly(obj: Object): any {
+  return createReactive(obj, false, true, readonlyMap);
 }
 
-function shallowReadonly(data: Object): any {
-  return createReactive(data, true, true);
+function shallowReadonly(obj: Object): any {
+  return createReactive(obj, true, true, shallowReadonlyMap);
 }
 
 /** 
@@ -99,9 +107,13 @@ function shallowReadonly(data: Object): any {
 function createReactive(
   data: Object,
   isShallow: Boolean = false,
-  isReadonly: Boolean = false
+  isReadonly: Boolean = false,
+  proxyMap: WeakMap<Object, any>
 ): any {
-  return new Proxy(data, {
+  const existionProxy = proxyMap.get(data);
+  if (existionProxy) return existionProxy;
+
+  const proxy = new Proxy(data, {
     get: function (target, key, receiver) {
       if (key === 'raw') {
         return target;
@@ -160,6 +172,9 @@ function createReactive(
       return result;
     }
   });
+
+  proxyMap.set(data, proxy);
+  return proxy;
 }
 
 function track(target: Object, key: any) {

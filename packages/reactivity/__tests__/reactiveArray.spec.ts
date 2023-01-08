@@ -93,5 +93,25 @@ describe('reactivity/reactive/array', () => {
     expect(spy).toHaveBeenCalledTimes(4);
     // In fact, 'values' function of Array is actually return the iterator in array
     expect(Array.prototype.values === Array.prototype[Symbol.iterator]).toBe(true);
-  })
+  });
+
+  it('should reactive “includes”', () => {
+    const observed = reactive(['bar', 'foo']);
+    const spy = jest.fn(() => observed.includes('bar')); // Essentially access length and index
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed[0] = 'wow';
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should reactive “includes” related to obj', () => {
+    let result;
+    const obj = {};
+    const observed = reactive([obj, 'bar']);
+    const spy = jest.fn(() => {
+      result = observed.includes(observed[0]);
+    });
+    effect(spy);
+    expect(result).toBe(true);
+  });
 });
