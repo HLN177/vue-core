@@ -114,4 +114,28 @@ describe('reactivity/reactive/array', () => {
     effect(spy);
     expect(result).toBe(true);
   });
+
+  it('should "includes" primitive obj', () => {
+    const obj = {};
+    const arr = reactive([obj]);
+    expect(arr.includes(obj)).toBe(true);
+  });
+  it('should not track length depencies when using push', () => {
+    const observed = reactive([1]);
+    const spy1 = jest.fn(() => {
+      observed.push(2);
+    });
+    const spy2 = jest.fn(() => {
+      observed.push(2);
+    });
+    effect(spy1);
+    effect(spy2);
+    expect(spy1).toBeCalledTimes(1);
+    expect(spy2).toBeCalledTimes(1);
+    effect(() => {
+      observed.length = 0;
+    });
+    expect(spy1).toBeCalledTimes(1);
+    expect(spy2).toBeCalledTimes(1);
+  });
 });

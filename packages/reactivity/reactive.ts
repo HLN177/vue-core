@@ -1,4 +1,5 @@
 import { TriggerOpTypes } from "./operations";
+import { arrayInstrumentations } from "./baseHandlers";
 /**
  * structure for saving effect function
  * target -> key -> effect function
@@ -42,6 +43,16 @@ export interface ReactiveEffect {
 }
 
 const ITERATE_KEY = Symbol('iterate');
+
+let shouldTrack = true;
+
+export function pauseTracking() {
+  shouldTrack = false
+}
+
+export function enableTracking() {
+  shouldTrack = true
+}
 
 /**
  * wrap function to register the effect func
@@ -111,12 +122,16 @@ function createReactive(
   proxyMap: WeakMap<Object, any>
 ): any {
   const existionProxy = proxyMap.get(data);
-  if (existionProxy) return existionProxy;
+  if (existionProxy) return existionProxy; // avoid multiple proxy creation of same object
 
   const proxy = new Proxy(data, {
     get: function (target, key, receiver) {
       if (key === 'raw') {
         return target;
+      }
+      // intercept and rewrite some original array methods
+      if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)) {
+        return Reflect.get(arrayInstrumentations, key);
       }
       // read only obj and 'symbol' key type do not need to trigger effect function 
       if (!isReadonly && typeof key !== 'symbol') {
@@ -179,7 +194,7 @@ function createReactive(
 
 function track(target: Object, key: any) {
   // return directly if activeEffect no existed
-  if (!activeEffect) {
+  if (!shouldTrack || !activeEffect) {
     return;
   }
   // 1. get depsMap from bucket by "target", depsMap is a "Map"
