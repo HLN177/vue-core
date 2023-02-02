@@ -1,4 +1,5 @@
-import { reactive, effect } from "../reactive";
+import { reactive } from "../reactive";
+import { effect } from "../effect";
 
 describe('reactivity/reactive/array', () => {
   it('should observe elements by index', () => {
