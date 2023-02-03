@@ -92,8 +92,7 @@ function createSetter() {
       : Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
     
     Reflect.set(target, key, newVal, receiver);
-    // @ts-expect-error
-    if (target === receiver!.raw) { // avoid triggering effect function by prototype
+    if (target === Reflect.get(receiver, 'raw')) { // avoid triggering effect function by prototype
       if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) { // resolve NaN
         trigger(target, key, type, newVal);
       }
