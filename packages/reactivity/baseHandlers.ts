@@ -91,10 +91,13 @@ function createSetter() {
       ? Number(key) < target.length ? TriggerOpTypes.SET : TriggerOpTypes.ADD
       : Object.prototype.hasOwnProperty.call(target, key) ? TriggerOpTypes.SET : TriggerOpTypes.ADD;
     
-    Reflect.set(target, key, newVal, receiver);
+    // prevent trigger effect from munipulating orignial data
+    const rawVal = (newVal as any).raw || newVal;
+    
+    Reflect.set(target, key, rawVal, receiver);
     if (target === Reflect.get(receiver, 'raw')) { // avoid triggering effect function by prototype
-      if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) { // resolve NaN
-        trigger(target, key, type, newVal);
+      if (oldVal !== rawVal && (oldVal === oldVal || rawVal === rawVal)) { // resolve NaN
+        trigger(target, key, type, rawVal);
       }
     }
     return true;

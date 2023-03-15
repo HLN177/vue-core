@@ -68,4 +68,18 @@ describe('reactivity/collections/map', () => {
     observed.delete('bar1');
     expect(spy).toHaveBeenCalledTimes(3);
   });
+
+  it('should not trigger effect when manipulating on original data', () => {
+    const original = new Map();
+    const observed1 = reactive(original);
+    const observed2 = reactive(new Map());
+    observed1.set('o2', observed2);
+    const spy = jest.fn(() => {
+      return observed1.get('o2').size;
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    original.get('o2').set('foo', 1);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
 });

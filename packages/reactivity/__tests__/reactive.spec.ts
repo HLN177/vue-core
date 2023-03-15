@@ -107,17 +107,6 @@ describe('reactivity/reactive', () => {
     expect(childSpy).toHaveBeenCalledTimes(4);
   });
 
-  it('should not recursive infinitely', () => {
-    const observed = reactive({ value: 1 });
-    const spy = jest.fn(() => {
-      observed.value++;
-    });
-    effect(spy);
-    expect(spy).toHaveBeenCalledTimes(1);
-    observed.value = 2;
-    expect(spy).toHaveBeenCalledTimes(2); // 用例失败因为: reactive set function 增加新旧值判断, 如果新旧值相等则不trigger effect function
-  });
-
   test('scheduler', () => {
     // determine a job queue
     const jobQueue = new Set<ReactiveEffect>();
@@ -357,5 +346,23 @@ describe('reactivity/reactive', () => {
         boo: 2
       }
     })
+  });
+
+  it('should not trigger effect when munipulating on original obj', () => {
+    const original: any = {
+      bar: ''
+    };
+    const observed1 = reactive(original);
+    const observed2 = reactive({
+      obj: 2
+    });
+    observed1.foo = observed2;
+    const spy = jest.fn(() => {
+      return observed1.foo.obj;
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    original.foo.obj = 3;
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

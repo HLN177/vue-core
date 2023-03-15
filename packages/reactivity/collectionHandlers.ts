@@ -23,11 +23,12 @@ function createInstrumentations() {
       return res;
     },
     add: function (key: unknown) {
+      const rawVal = (key as Target)[ReactiveFlags.RAW] || key;
       // get original obj
       const target = (this as Target)[ReactiveFlags.RAW];
       // check if key existed
-      const hasKey = mutableInstrumentations.has.call(this, key);
-      const res = target.add(key);
+      const hasKey = mutableInstrumentations.has.call(this, rawVal);
+      const res = target.add(rawVal);
       if (!hasKey) {
         trigger(target, ITERATE_KEY, TriggerOpTypes.ADD);
       }
@@ -38,8 +39,11 @@ function createInstrumentations() {
       const hasKey = mutableInstrumentations.has.call(this, key);
       // get old value
       const oldVal = target.get(key);
+      // if value is a reactive object, should not be added to the raw collection.
+      // Prevent trigger effect from munipulating on original obj 
+      const rawVal = (value as Target)[ReactiveFlags.RAW] || value;
       // set new value
-      target.set(key, value);
+      target.set(key, rawVal);
       // if key did not existed, it is an add operation
       if (!hasKey) {
         trigger(target, key, TriggerOpTypes.ADD);

@@ -121,6 +121,7 @@ describe('reactivity/reactive/array', () => {
     const arr = reactive([obj]);
     expect(arr.includes(obj)).toBe(true);
   });
+
   it('should not track length depencies when using push', () => {
     const observed = reactive([1]);
     const spy1 = jest.fn(() => {
@@ -138,5 +139,19 @@ describe('reactivity/reactive/array', () => {
     });
     expect(spy1).toBeCalledTimes(1);
     expect(spy2).toBeCalledTimes(1);
+  });
+
+  it('should not trigger effect if munipulating on original array', () => {
+    const original: any[] = [];
+    const observed1 = reactive(original);
+    const observed2 = reactive([]);
+    observed1[0] = observed2;
+    const spy = jest.fn(() => {
+      return observed1[0].size;
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    original[0].push(3);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });
