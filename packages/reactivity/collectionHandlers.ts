@@ -65,10 +65,15 @@ function createInstrumentations() {
       const res = target.has(key);
       return res;
     },
-    forEach: function (callback: Function) {
+    forEach: function (callback: Function, thisArg: any) {
+      // wrap function transfer data to reactive data
+      const wrap = (val: any) => typeof val === 'object' ? reactive(val) : val;
       const target = (this as Target)[ReactiveFlags.RAW];
       track(target, ITERATE_KEY);
-      target.forEach(callback);
+      // invoke callback manually and implement deep reactive by wrap function
+      target.forEach((val: unknown, key: unknown) => {
+        callback.call(thisArg, wrap(val), wrap(key), this);
+      });
     }
   };
 

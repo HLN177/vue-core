@@ -83,7 +83,7 @@ describe('reactivity/collections/map', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('should trigger effect related to forEach', () => {
+  it('should observe forEach iteration', () => {
     const observed = reactive(new Map<string, number>([
       ['bar', 1]
     ]));
@@ -98,6 +98,40 @@ describe('reactivity/collections/map', () => {
     effect(spy);
     expect(spy).toHaveBeenCalledTimes(1);
     observed.set('foo', 2);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should observe nested values in iterations (forEach)', () => {
+    const key = 'bar';
+    const observed = reactive(new Map<string, Set<any>>([
+      [key, new Set([1, 2, 3])]
+    ]));
+    const spy = jest.fn(() => {
+      observed.forEach((value: any, key: unknown) => {
+        console.log(value.size);
+      });
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.get(key).delete(1);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should observe forEach iteration while value changed', () => {
+    const observed = reactive(new Map<string, number>([
+      ['bar', 1]
+    ]));
+
+    const spy = jest.fn(() => {
+      observed.forEach((value: string, key: number) => {
+        console.log(value);
+        console.log(key);
+      });
+    });
+
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.set('bar', 2);
     expect(spy).toHaveBeenCalledTimes(2);
   });
 });

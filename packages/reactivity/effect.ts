@@ -1,3 +1,4 @@
+import { toRawType } from "../tools";
 import { TriggerOpTypes } from "./operations";
 /**
  * structure for saving effect function
@@ -130,7 +131,11 @@ export function trigger(
   });
 
   // when trigger type equals to 'add' and 'del', effects related to 'ITERATE_KEY' should be triggered
-  if (TriggerOpTypes.ADD === type || TriggerOpTypes.DEL === type) {
+  if (
+    TriggerOpTypes.ADD === type ||
+    TriggerOpTypes.DEL === type ||
+    TriggerOpTypes.SET === type && toRawType(target) === 'Map' // Value in Map forEach interation is considered
+  ) {
     const iterateEffects: Set<any> | undefined = depMap.get(ITERATE_KEY);
     // prevent recursive infinitely by add iterate effects to the new set
     iterateEffects && iterateEffects.forEach(effectFn => {
