@@ -82,4 +82,22 @@ describe('reactivity/collections/map', () => {
     original.get('o2').set('foo', 1);
     expect(spy).toHaveBeenCalledTimes(1);
   });
+
+  it('should trigger effect related to forEach', () => {
+    const observed = reactive(new Map<string, number>([
+      ['bar', 1]
+    ]));
+
+    const spy = jest.fn(() => {
+      observed.forEach((value: string, key: number) => {
+        console.log(value);
+        console.log(key);
+      });
+    });
+
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.set('foo', 2);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
 });

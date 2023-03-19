@@ -54,4 +54,19 @@ describe('reactivity/collections/set', () => {
     observed.delete(4);
     expect(spy).toHaveBeenCalledTimes(1);
   });
+
+  it('should trigger effect related to forEach', () => {
+    const observed = reactive(new Set<string>(['bar']));
+
+    const spy = jest.fn(() => {
+      observed.forEach((value: string) => {
+        console.log(value);
+      });
+    });
+
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.add('foo');
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
 });

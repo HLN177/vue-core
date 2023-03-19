@@ -64,6 +64,11 @@ function createInstrumentations() {
       const target = (this as Target)[ReactiveFlags.RAW];
       const res = target.has(key);
       return res;
+    },
+    forEach: function (callback: Function) {
+      const target = (this as Target)[ReactiveFlags.RAW];
+      track(target, ITERATE_KEY);
+      target.forEach(callback);
     }
   };
 
