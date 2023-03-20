@@ -1,4 +1,4 @@
-import { ITERATE_KEY, track, trigger } from "./effect";
+import { ITERATE_KEY, MAP_KEY_ITERATE_KEY, track, trigger } from "./effect";
 import { TriggerOpTypes } from "./operations";
 import { reactive, ReactiveFlags, Target } from "./reactive";
 
@@ -74,12 +74,79 @@ function createInstrumentations() {
       target.forEach((val: unknown, key: unknown) => {
         callback.call(thisArg, wrap(val), wrap(key), this);
       });
-    }
+    },
+    [Symbol.iterator]: iterationMethod,
+    entries: iterationMethod,
+    values: valuesIterationMethod,
+    keys: keysIterationMethod
   };
 
   return [
     mutableInstrumentations
   ];
+}
+
+function iterationMethod() {
+  // @ts-expect-error
+  const target = (this as any)[ReactiveFlags.RAW];
+  const itr = target[Symbol.iterator]();
+  const wrap = (val: any) => typeof val === 'object' && val !== null ? reactive(val) : val;
+  track(target, ITERATE_KEY);
+  // return customized iterator
+  return {
+    // 迭代器协议
+    next() {
+      const { value, done } = itr.next();
+      return {
+        value: value ? [wrap(value[0]), wrap(value[1])] : value,
+        done
+      };
+    },
+    // 实现可迭代协议
+    [Symbol.iterator]() {
+      return this;
+    }
+  }
+}
+
+function valuesIterationMethod() {
+  // @ts-expect-error
+  const target = (this as any)[ReactiveFlags.RAW];
+  const itr = target.values();
+  const wrap = (val: any) => typeof val === 'object' && val !== null ? reactive(val) : val;
+  track(target, ITERATE_KEY);
+  return {
+    next() {
+      const { value, done } = itr.next();
+      return {
+        value: wrap(value),
+        done
+      };
+    },
+    [Symbol.iterator]() {
+      return this;
+    }
+  }
+}
+
+function keysIterationMethod() {
+  // @ts-expect-error
+  const target = (this as any)[ReactiveFlags.RAW];
+  const itr = target.keys();
+  const wrap = (val: any) => typeof val === 'object' && val !== null ? reactive(val) : val;
+  track(target, MAP_KEY_ITERATE_KEY); // value change will not trigger effect about keys()
+  return {
+    next() {
+      const { value, done } = itr.next();
+      return {
+        value: wrap(value),
+        done
+      };
+    },
+    [Symbol.iterator]() {
+      return this;
+    }
+  }
 }
 
 const [

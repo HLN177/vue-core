@@ -36,6 +36,8 @@ export interface ReactiveEffect {
 
 export const ITERATE_KEY = Symbol('iterate');
 
+export const MAP_KEY_ITERATE_KEY = Symbol('map_key_iterate');
+
 let shouldTrack = true;
 
 export function pauseTracking() {
@@ -137,6 +139,19 @@ export function trigger(
     TriggerOpTypes.SET === type && toRawType(target) === 'Map' // Value in Map forEach interation is considered
   ) {
     const iterateEffects: Set<any> | undefined = depMap.get(ITERATE_KEY);
+    // prevent recursive infinitely by add iterate effects to the new set
+    iterateEffects && iterateEffects.forEach(effectFn => {
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn);
+      }
+    });
+  }
+
+  if (
+    (TriggerOpTypes.ADD === type || TriggerOpTypes.DEL === type) &&
+    toRawType(target) === 'Map' // key in map keys() is considered
+  ) {
+    const iterateEffects: Set<any> | undefined = depMap.get(MAP_KEY_ITERATE_KEY);
     // prevent recursive infinitely by add iterate effects to the new set
     iterateEffects && iterateEffects.forEach(effectFn => {
       if (effectFn !== activeEffect) {

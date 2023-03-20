@@ -134,4 +134,102 @@ describe('reactivity/collections/map', () => {
     observed.set('bar', 2);
     expect(spy).toHaveBeenCalledTimes(2);
   });
+
+  it('should observe values in iterations (for...of...)', () => {
+    const observed = reactive(new Map([
+      ['key1', 'value1'],
+      ['key2', 'value2'],
+    ]));
+
+    const spy = jest.fn(() => {
+      for (const [key, value] of observed) {
+        console.log(key, value);
+      }
+    });
+
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.set('key3', 'value3');
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should observe nested values in iterations (for...of)', () => {
+    const key = 'foo';
+    const observed = reactive(new Map([
+      [key, { foo: 1 }]
+    ]));
+    const spy = jest.fn(() => {
+      for (const [key, value] of observed) {
+        value.foo;
+      }
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.get(key).foo = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
+  })
+
+  it('should observe nested values in iterations (values)', () => {
+    const key = {};
+    const observed = reactive(new Map([[key, { foo: 1 }]]))
+    const spy = jest.fn(() => {
+      for (const value of observed.values()) {
+        value.foo;
+      }
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.get(key).foo = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
+  })
+
+  it('should observe nested values in iterations (entries)', () => {
+    const key = {};
+    const observed = reactive(new Map([
+      [key, { foo: 1 }]
+    ]));
+    const spy = jest.fn(() => {
+      for (const [key, value] of observed.entries()) {
+        value.foo;
+      }
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.get(key).foo = 2;
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should observe keys in iterations (keys)', () => {
+    const observed = reactive(new Map([
+      ['key1', 'value1'],
+      ['key2', 'value2'],
+    ]));
+
+    const spy = jest.fn(() => {
+      for (let key of observed.keys()) {
+        console.log(key);
+      }
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.delete('key1');
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should not observe values in iterations (keys)', () => {
+    const observed = reactive(new Map([
+      ['key1', 'value1'],
+      ['key2', 'value2'],
+    ]));
+
+    const spy = jest.fn(() => {
+      for (let key of observed.keys()) {
+        console.log(key);
+      }
+    });
+    effect(spy);
+    expect(spy).toHaveBeenCalledTimes(1);
+    observed.set('key2', 'value3');
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
 });
